@@ -6,6 +6,7 @@
 
 // Init the DS3231 using the hardware interface
 DS3231  rtc(SDA, SCL);
+Sunrise sunrise(55.32, 18.06, 0);
 
 void setup()
 {
@@ -28,13 +29,44 @@ void setup()
   lcd.print("D:");
   lcd.print(tmp[1]);
 
-  
+    sunrise.Astronomical(); //Actual, Civil, Nautical, Astronomical
+
+  byte h,m;
+  int t;
+  // t= minutes past midnight of sunrise (6 am would be 360)
+  t=sunrise.Rise(5,5); // (month,day) - january=1
+  if(t>=0){
+    h=sunrise.Hour();
+    m=sunrise.Minute();
+  }
 }
 
 void loop()
 {
-  
+
+    
 }
 
+string getSunrise()
+{
+  String date = rtc.getDateStr(1, 2);
+  char *tmp;
+  tmp = strtok(&date[0], ".");
 
+  byte h, m;
+  int t;
+  t = sunrise.Rise(tmp[0], tmp[1]);
+
+  if(t>0){
+    h = sunrise.Hour();
+    m = sunrise.Minute();
+  }
+
+  return 
+}
+
+string getSunset()
+{
+  
+}
 
