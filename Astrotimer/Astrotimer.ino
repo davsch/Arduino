@@ -79,63 +79,61 @@ void loop()
   lcd.print(dateStr + " " + timeStr.substring(0, 2) + strColon + timeStr.substring(3, 5));
   lcd.setCursor(0, 1);  
   
-  String strSunrise = getSunrise(dateStr);
+  String strSunrise = getSunrise(false, dateStr);
 
-  lcd.write("*");
+  lcd.write(" *");
   lcd.write(byte(0));
   lcd.print(strSunrise);
 
-  String strSunset = getSunset(dateStr);
+  String strSunset = getSunrise(true, dateStr);
   
   lcd.write(" *");
   lcd.write(byte(1));
   lcd.print(strSunset);
-      
+  
   delay(1000);
 }
 
-
-
-String getSunrise(String dateStr)
+String getSunrise(bool sunset, String dateStr)
 {
-  byte h, m;
-  int t;
+  byte hoursByte, minutesByte;
+  int minutesInt;
+  String hoursStr, minutesStr;
 
   int intYear = dateStr.substring(0, 2).toInt();
   int intMonth = dateStr.substring(3, 5).toInt();
   int intDay = dateStr.substring(6, 8).toInt();
-  
-  t = sunrise.Rise((char)intMonth, (char)intDay);
 
-  if(t>0){
-    h = sunrise.Hour();
-    m = sunrise.Minute();
+  // What do we askt for?
+  if(sunset)
+  {
+    minutesInt = sunrise.Set((char)intMonth, (char)intDay);
   }
-    
-  return String(h) + ":" + String(m);
-}
-
-String getSunset(String dateStr)
-{
-  byte h, m;
-  int t;
-
-  int intYear = dateStr.substring(0, 2).toInt();
-  int intMonth = dateStr.substring(3, 5).toInt();
-  int intDay = dateStr.substring(6, 8).toInt();
-  
-  t = sunrise.Set((char)intMonth, (char)intDay);
-
-  if(t>0){
-    h = sunrise.Hour();
-    m = sunrise.Minute();
+  else
+  {
+    minutesInt = sunrise.Rise((char)intMonth, (char)intDay);
   }
 
-  if(m < 10){
-    return String(h) + ":0" + String(m);
+  // Check amount of minutes after midnigt sunrise/sunset occurs and convert to h:m
+  if(minutesInt > 0){
+    hoursByte = sunrise.Hour();
+    minutesByte = sunrise.Minute();
+  }
+
+  // Fix the output format
+  if(hoursByte < 10){
+    hoursStr = "0" + String(hoursByte, DEC);
   }
   else{
-    return String(h) + ":" + String(m);
+    hoursStr = String(hoursByte, DEC);
   }
+  if(minutesByte < 10){
+    minutesStr = "0" + String(minutesByte, DEC);
+  }
+  else{
+    minutesStr = String(minutesByte, DEC);
+  }
+
+  return hoursStr + ":" + minutesStr;
 }
 
