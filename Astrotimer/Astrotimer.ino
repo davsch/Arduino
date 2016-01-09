@@ -2,21 +2,39 @@
 #include <Sunrise.h>
 #include <DS3231.h>
 
-#define DST 1
+// Define LCD keyboard buttons
+#define btnRIGHT 0
+#define btnUP 1
+#define btnDOWN 2
+#define btnLEFT 3
+#define btnSELECT 4
+#define btnNONE 5
+
+
+// Define UTC + Daylight Save Time offset (1h + 0/1h)
+int intTimeZoneAndDstOffset = 1;
 
 // Init the DS3231 using the hardware interface
 DS3231  rtc(SDA, SCL);
 
 // Init the sunrise lib with longitude, latitude and timezone (UTC+1/UTC+2)
-Sunrise sunrise(59.3293235, 18.0685808, DST);
+Sunrise sunrise(59.3293235, 18.0685808, intTimeZoneAndDstOffset);
 
 // Init the LCD Shield
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);  
 
+// Set flag for time blink indicator
 bool blinkColon = true;
+
+// Set flag for date/time set indicator
+bool dateTimeSet = false;
+
 
 void setup()
 {
+  // Do we need to reinitialize Sunrise class due to summer-time?
+
+  
   // Define LCD size and clear screen 
   lcd.begin(16,2);
   
@@ -54,13 +72,8 @@ void setup()
   //rtc.setTime(20,24,0);
   //rtc.setDate(9, 1, 2016);
 
-  
-
   sunrise.Actual(); //Actual, Civil, Nautical, Astronomical
-  
-  //lcd.print("Time:" + dateStr);
-  //lcd.setCursor(1, 0);
-  //lcd.print("Sunrise:" + sunriseTimeStr);
+
 }
 
 void loop()
@@ -139,4 +152,19 @@ String getSunrise(bool sunset, String dateStr)
   // Return sunrise/sunset as hour:minute string
   return hoursStr + ":" + minutesStr;
 }
+
+int getTimeOffset()
+{
+  // Return Time zone & DST offset
+  
+  // Swedish DST 
+  // Start: last sunday of march 
+  // End: last sunday of october
+
+  // TODO: Fix time offset check
+
+  return 1;
+}
+
+
 
