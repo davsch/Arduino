@@ -22,24 +22,26 @@ void setup()
   
   lcd.clear();
 
-  // Create custom characters for sunrise & sunset
+  // Create some fancy icons for sunrise & sunset
   byte charUp[8] = {
-    B00000,
-    B00000,
     B00100,
     B01110,
     B11111,
     B00000,
+    B00000,
+    B10101,
+    B01110,
     B11111,
   };
 
   byte charDown[8] = {
-    B00000,
-    B00000,
     B11111,
     B01110,
     B00100,
     B00000,
+    B00000,
+    B10101,
+    B01110,
     B11111,
   };
 
@@ -76,20 +78,20 @@ void loop()
   
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print(dateStr + " " + timeStr.substring(0, 2) + strColon + timeStr.substring(3, 5));
-  lcd.setCursor(0, 1);  
-  
+  lcd.print(dateStr);
+  lcd.setCursor(11, 0);
+  lcd.print(timeStr.substring(0, 2) + strColon + timeStr.substring(3, 5));
+    
   String strSunrise = getSunrise(false, dateStr);
 
-  lcd.write(" *");
+  lcd.setCursor(0, 1);  
   lcd.write(byte(0));
-  lcd.print(strSunrise);
+  lcd.print(" " + strSunrise);
 
   String strSunset = getSunrise(true, dateStr);
-  
-  lcd.write(" *");
+  lcd.setCursor(9, 1);  
   lcd.write(byte(1));
-  lcd.print(strSunset);
+  lcd.print(" " + strSunset);
   
   delay(1000);
 }
@@ -100,11 +102,11 @@ String getSunrise(bool sunset, String dateStr)
   int minutesInt;
   String hoursStr, minutesStr;
 
-  int intYear = dateStr.substring(0, 2).toInt();
+  // Extract month and day from date string
   int intMonth = dateStr.substring(3, 5).toInt();
   int intDay = dateStr.substring(6, 8).toInt();
 
-  // What do we askt for?
+  // What do we ask for?
   if(sunset)
   {
     minutesInt = sunrise.Set((char)intMonth, (char)intDay);
@@ -134,6 +136,7 @@ String getSunrise(bool sunset, String dateStr)
     minutesStr = String(minutesByte, DEC);
   }
 
+  // Return sunrise/sunset as hour:minute string
   return hoursStr + ":" + minutesStr;
 }
 
