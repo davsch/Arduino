@@ -10,6 +10,13 @@
 #define btnSELECT 4
 #define btnNONE 5
 
+// Define delay for button press and inactive timeout
+#define BUTTON_DELAY 500
+#define BUTTON_TIMEOUT 5000
+
+
+int lcd_key = 0;
+int adc_key_in = 0;
 
 // Define UTC + Daylight Save Time offset (1h + 0/1h)
 int intTimeZoneAndDstOffset = 1;
@@ -23,13 +30,15 @@ Sunrise sunrise(59.3293235, 18.0685808, intTimeZoneAndDstOffset);
 // Init the LCD Shield
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);  
 
-// Set flag for time blink indicator
-bool blinkColon = true;
+// Define display toggle
+bool displayToggle = true;
 
-// Set flag for date/time set indicator
+// Define date/time set indicator
 bool dateTimeSet = false;
 
-
+// Define set-up mode
+bool setUpMode = false;
+bool setUpType = 0; // 0 = date, 1 = time
 void setup()
 {
   // Do we need to reinitialize Sunrise class due to summer-time?
@@ -78,22 +87,98 @@ void setup()
 
 void loop()
 {
+  lcd_key = read_LCD_buttons();
+  
+  switch (lcd_key)
+  {
+    case btnUP:
+    {
+      if(setUpMode)
+      {
+        if(setUpType == 0)
+        {
+          // Adjust date up
+        }
+        else if(setUpType == 1)
+        {
+          // Adjust time up
+        }
+      }
+    }
+    case btnDOWN:
+    {
+      if(setUpMode)
+      {
+        if(setUpType == 0)
+        {
+          // Adjust date down
+        }
+        else if(setUpType == 1)
+        {
+          // Adjust time down
+        }
+      }
+    }
+    case btnLEFT:
+    {
+      if(setUpMode)
+      {
+        if(setUpType == 0)
+        {
+          
+        }
+        else if(setUpType == 1)
+        {
+          
+        }
+      }
+    }
+    case btnRIGHT:
+    {
+      if(setUpMode)
+      {
+        if(setUpType == 0)
+        {
+          
+        }
+        else if(setUpType == 1)
+        {
+          
+        }
+      }
+    }
+    case btnSELECT:
+    {
+      setUpMode = !setUpMode;
+    }
+  }
+  
+  delay(BUTTON_DELAY);
+  
   String dateStr = rtc.getDateStr(1, 2);
   String timeStr = rtc.getTimeStr();
-  String strColon = ":";
+  String colonStr = ":";
   
-  if(!blinkColon)
+  if(!setUpMode && !displayToggle)
   {
-    strColon = " ";      
+    colonStr = " ";      
   }
     
-  blinkColon = !blinkColon;
+  displayToggle = !displayToggle;
   
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print(dateStr);
+
+  if(!(setUpMode && setUpType == 0 && displayToggle))
+  {
+    lcd.print(dateStr);
+  }
+  
   lcd.setCursor(11, 0);
-  lcd.print(timeStr.substring(0, 2) + strColon + timeStr.substring(3, 5));
+  if(!(setUpMode && setUpType == 1 && displayToggle))
+  {
+    lcd.print(timeStr.substring(0, 2) + colonStr + timeStr.substring(3, 5));
+  }
     
   String strSunrise = getSunrise(false, dateStr);
 
@@ -105,8 +190,23 @@ void loop()
   lcd.setCursor(9, 1);  
   lcd.write(byte(1));
   lcd.print(" " + strSunset);
-  
-  delay(1000);
+
+  delay(500);
+}
+
+int read_LCD_buttons()
+{
+  adc_key_in = analogRead(0);
+
+  if(adc_key_in > 1000) return btnNONE;
+  if (adc_key_in < 50)   return btnRIGHT;  
+  if (adc_key_in < 250)  return btnUP; 
+  if (adc_key_in < 400)  return btnDOWN; 
+  if (adc_key_in < 635)  return btnLEFT; 
+  if (adc_key_in < 890)  return btnSELECT;   
+
+  return btnNONE;
+
 }
 
 String getSunrise(bool sunset, String dateStr)
