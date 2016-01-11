@@ -1,6 +1,7 @@
 #include <LiquidCrystal.h>
 #include <Sunrise.h>
-#include <DS3231.h>
+#include <DS3232RTC.h>
+#include <Wire.h>
 
 // Define LCD keyboard buttons
 #define btnRIGHT 0
@@ -21,9 +22,6 @@ int adc_key_in = 0;
 // Define UTC + Daylight Save Time offset (1h + 0/1h)
 int intTimeZoneAndDstOffset = 1;
 
-// Init the DS3231 using the hardware interface
-DS3231  rtc(SDA, SCL);
-
 // Init the sunrise lib with longitude, latitude and timezone (UTC+1/UTC+2)
 Sunrise sunrise(59.3293235, 18.0685808, intTimeZoneAndDstOffset);
 
@@ -38,12 +36,23 @@ bool dateTimeSet = false;
 
 // Define set-up mode
 bool setUpMode = false;
-bool setUpType = 0; // 0 = date, 1 = time
+int setUpType = 0; // 0 = year, 1 = day, 2 = month, 3 = hour, 4 = minute
 void setup()
 {
   // Do we need to reinitialize Sunrise class due to summer-time?
 
+  // Get time from RTC
+  setSyncProvider(RTC.get);
   
+  if(timeStatus() != timeSet) 
+  {    
+    Serial.println("Unable to sync with the RTC");
+  }
+  else
+  {
+      Serial.println("RTC has set the system time");      
+  }
+
   // Define LCD size and clear screen 
   lcd.begin(16,2);
   
@@ -75,7 +84,6 @@ void setup()
   lcd.createChar(0, charUp);
   lcd.createChar(1, charDown);
 
-  rtc.begin();
   // If necessary - set date & time
   //rtc.setDOW(FRIDAY);
   //rtc.setTime(20,24,0);
@@ -95,13 +103,30 @@ void loop()
     {
       if(setUpMode)
       {
-        if(setUpType == 0)
+        switch (setUpType)
         {
-          // Adjust date up
-        }
-        else if(setUpType == 1)
-        {
-          // Adjust time up
+          case 0:
+          {
+            // Years
+          }
+          case 1:
+          {
+            // Months
+          }
+          case 2:
+          {
+            // Days
+          }
+          case 3:
+          {
+            // Hours
+            adjustTime(3600);
+          }
+          case 4:
+          {
+            // Minutes
+            adjustTime(60);
+          }
         }
       }
     }
@@ -109,13 +134,30 @@ void loop()
     {
       if(setUpMode)
       {
-        if(setUpType == 0)
+        switch (setUpType)
         {
-          // Adjust date down
-        }
-        else if(setUpType == 1)
-        {
-          // Adjust time down
+          case 0:
+          {
+            // Years
+          }
+          case 1:
+          {
+            // Months
+          }
+          case 2:
+          {
+            // Days
+          }
+          case 3:
+          {
+            // Hours
+            adjustTime(-3600);
+          }
+          case 4:
+          {
+            // Minutes
+            adjustTime(-60);
+          }
         }
       }
     }
@@ -125,11 +167,11 @@ void loop()
       {
         if(setUpType == 0)
         {
-          
+          setUpType = 4;
         }
-        else if(setUpType == 1)
+        else
         {
-          
+          setUpType = setUpType - 1;
         }
       }
     }
@@ -137,13 +179,13 @@ void loop()
     {
       if(setUpMode)
       {
-        if(setUpType == 0)
+        if(setUpType == 4)
         {
-          
+          setUpType = 0;
         }
-        else if(setUpType == 1)
+        else
         {
-          
+          setUpType = setUpType + 1;
         }
       }
     }
@@ -155,8 +197,6 @@ void loop()
   
   delay(BUTTON_DELAY);
   
-  String dateStr = rtc.getDateStr(1, 2);
-  String timeStr = rtc.getTimeStr();
   String colonStr = ":";
   
   if(!setUpMode && !displayToggle)
@@ -169,29 +209,57 @@ void loop()
   lcd.clear();
   lcd.setCursor(0, 0);
 
-  if(!(setUpMode && setUpType == 0 && displayToggle))
-  {
-    lcd.print(dateStr);
+  if(setUpMode && setUpType < 3 && displayToggle)
+  {    
+    String strYear = String(year());
+    String strMonth = getDoubleDigit(month());
+    String strDay = getDoubleDigit(day());
+
+    if(setUpType == 0)
+      strYear = "    ";
+    else if(setUpType == 1)
+      strMonth = "  ";
+    else if(setUpType == 2)
+      strDay = "  ";
+
+    lcd.print(strYear + ":" + strMonth + ":" + strDay);
   }
+  else 
+    lcd.print(String(year()) + ":" + getDoubleDigit(month()) + ":" + getDoubleDigit(day()));
+ 
   
   lcd.setCursor(11, 0);
-  if(!(setUpMode && setUpType == 1 && displayToggle))
+  if(setUpMode && setUpType > 2 && displayToggle)
   {
-    lcd.print(timeStr.substring(0, 2) + colonStr + timeStr.substring(3, 5));
-  }
+    if(setUpMode != 3)
+      lcd.print(getDoubleDigit(hour()) + ":  ");
+    else
+      lcd.print(String("  :" + getDoubleDigit(minute())));
     
-  String strSunrise = getSunrise(false, dateStr);
+  }
+  else
+    lcd.print(getDoubleDigit(hour()) + colonStr + getDoubleDigit(minute()));
+  
+  String strSunrise = getSunrise(false);
 
   lcd.setCursor(0, 1);  
   lcd.write(byte(0));
   lcd.print(" " + strSunrise);
 
-  String strSunset = getSunrise(true, dateStr);
+  String strSunset = getSunrise(true);
   lcd.setCursor(9, 1);  
   lcd.write(byte(1));
   lcd.print(" " + strSunset);
 
   delay(500);
+}
+
+String getDoubleDigit(int digit)
+{
+  if(digit < 10)
+    return "0" + String(digit);
+  else
+    return String(digit);
 }
 
 int read_LCD_buttons()
@@ -209,28 +277,25 @@ int read_LCD_buttons()
 
 }
 
-String getSunrise(bool sunset, String dateStr)
+String getSunrise(bool sunset)
 {
   byte hoursByte, minutesByte;
-  int minutesInt;
+  int intMinutesAfterMidnight;
   String hoursStr, minutesStr;
 
-  // Extract month and day from date string
-  int intMonth = dateStr.substring(3, 5).toInt();
-  int intDay = dateStr.substring(6, 8).toInt();
-
+  
   // What do we ask for?
   if(sunset)
   {
-    minutesInt = sunrise.Set((char)intMonth, (char)intDay);
+    intMinutesAfterMidnight = sunrise.Set((char)month(), (char)day());
   }
   else
   {
-    minutesInt = sunrise.Rise((char)intMonth, (char)intDay);
+    intMinutesAfterMidnight = sunrise.Rise((char)month(), (char)day());
   }
 
   // Check amount of minutes after midnigt sunrise/sunset occurs and convert to h:m
-  if(minutesInt > 0){
+  if(intMinutesAfterMidnight > 0){
     hoursByte = sunrise.Hour();
     minutesByte = sunrise.Minute();
   }
