@@ -12,7 +12,7 @@
 #define btnNONE 5
 
 // Define delay for button press and inactive timeout
-#define BUTTON_DELAY 500
+#define BUTTON_DELAY 400
 #define BUTTON_TIMEOUT 5000
 
 #define DISPLAY_INACTIVE_MODE 60000
@@ -21,6 +21,7 @@
 #define SUNRISE_READ_INTERVAL 60000
 
 unsigned long displayLastRefresh;
+int displayRefreshInterval;
 unsigned long sunriseLastRead;
 unsigned long buttonLastRead;
 
@@ -39,6 +40,7 @@ LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 // Define display toggle
 bool displayToggle = true;
 bool displayOff = false;
+bool buttonPressed = false;
 
 String colonStr = ":";
 
@@ -110,45 +112,98 @@ void setup()
 }
 
 void loop()
-{
-  //Serial.println(String(millis() - btnPressInterval));
+{  
   if((millis() - buttonLastRead) >= BUTTON_DELAY)
-  {
-    
+  {    
     lcd_key = read_LCD_buttons();
     
     if(lcd_key == btnSELECT)
     {
+      buttonPressed = true;
       Serial.println("Select pressed");
+      setUpMode = !setUpMode;
+
+      if(setUpMode)
+        setUpType = 0;
     }
     else if(lcd_key == btnLEFT)
     {
+      buttonPressed = true;
       Serial.println("Left pressed");
+      if(setUpMode)
+      {
+        if(setUpType == 0)
+          setUpType = 4;
+        else 
+          setUpType = setUpType - 1;
+      }
     }
     else if(lcd_key == btnRIGHT)
     {
+      buttonPressed = true;
       Serial.println("Right pressed");
+      if(setUpMode)
+      {
+        if(setUpType == 4)
+          setUpType = 0;
+        else
+          setUpType = setUpType + 1;
+      }
+      
     }
     else if(lcd_key == btnUP)
     {
+      buttonPressed = true;
       Serial.println("Up pressed");
+      if(setUpMode)
+      {
+        switch (setUpType)
+        {
+          case 1:
+
+          break;
+          case 2:
+            
+          break;
+          case 3:
+            adjustTime(3600);
+          break;
+          case 4:
+            adjustTime(60);
+          break;
+        }
+      }
     }
     else if(lcd_key == btnDOWN)
     {
+      buttonPressed = true;
       Serial.println("Down pressed");
+      if(setUpMode)
+      {
+        if(setUpType == 4)
+        {
+          adjustTime(-60);
+        }
+      }
+      
     }
     buttonLastRead = millis();
     
   }
 
-
-    
+  // Is it time to refresh the display?
+  if(setUpMode)
+    displayRefreshInterval = DISPLAY_REFRESH_SETUP;
+  else
+    displayRefreshInterval = DISPLAY_REFRESH_OPERATING;
   
-
-  if((millis() - displayLastRefresh) >= DISPLAY_REFRESH_OPERATING)
+  if(((millis() - displayLastRefresh) >= displayRefreshInterval) || buttonPressed)
   {
     displayToggle = !displayToggle;
 
+    buttonPressed = false;
+      
+    // If not in set-up mode, the colon between hours and minues should blink
     if(!setUpMode && !displayToggle)
     {
       colonStr = " ";      
@@ -157,7 +212,8 @@ void loop()
     {
       colonStr = ":";
     }
-    
+
+    // Since LiquidLCD does not support refreshing a single row we need to fill it with white-spaces
     Serial.println("Refreshing LCD");
     lcd.setCursor(0, 0);
     lcd.print("                ");
@@ -185,7 +241,7 @@ void loop()
     lcd.setCursor(11, 0);
     if(setUpMode && setUpType > 2 && displayToggle)
     {
-      if(setUpMode != 3)
+      if(setUpType != 3)
         lcd.print(getDoubleDigit(hour()) + ":  ");
       else
         lcd.print(String("  :" + getDoubleDigit(minute())));
