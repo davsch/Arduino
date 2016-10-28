@@ -25,12 +25,8 @@ bool blinkColon = true;
 const int INT_LIGHTS_OFF_HOUR = 23;
 const int INT_LIGHTS_ON_HOUR = 6;
 
-// Assign switch codes based on sniffed data from remote control
-const int INT_SWITCH3_ON = 1397079;
-const int INT_SWITCH3_OFF = 1397076;
-
 // Set loop delay
-const int INT_LOOP_DELAY = 500;
+//const int INT_LOOP_DELAY = 6000;
 
 void setup()
 {
@@ -98,68 +94,65 @@ void loop()
   
   // Get sunrise data based on date
   intSunriseMinutes= sunrise.Rise((char)month(), (char)day());
-  String strSunrise = getTimeFormattedAsString(intSunriseMinutes, sunrise.Hour(), sunrise.Minute());
+  String strSunrise = getTimeFormattedAsString(sunrise.Hour(), sunrise.Minute());
 
   // Get sunset data based on date
   intSunsetMinutes = sunrise.Set((char)month(), (char)day());
-  String strSunset = getTimeFormattedAsString(intSunsetMinutes, sunrise.Hour(), sunrise.Minute());
+  String strSunset = getTimeFormattedAsString(sunrise.Hour(), sunrise.Minute());
 
   if(hour() < INT_LIGHTS_ON_HOUR)
   {
     Serial.println("Before lights-on hour in the morning - switch off");
-    rcSwitch.send(INT_SWITCH3_OFF, 24);
+    rcSwitch.send(1397076, 24);
   }
   else if(!isPastSunrise(intSunriseMinutes))
   {
      // If it's not past sunrise - set switch to 'On'  
      Serial.println("Before sunrise - switch on");
-     rcSwitch.send(INT_SWITCH3_ON, 24);
+     rcSwitch.send(1397079, 24);
   }
   else if(isPastSunrise(intSunriseMinutes) && !isPastSunset(intSunsetMinutes))
   {
     // If it's past sunrise but not after sunset - set switch to 'Off'  
     Serial.println("After sunrise, before sunset - switch off");
-    rcSwitch.send(INT_SWITCH3_OFF, 24);
+    rcSwitch.send(1397076, 24);
   }
   else if(isPastSunset(intSunsetMinutes) && (hour() < INT_LIGHTS_OFF_HOUR))
   {
     // If it's past sunrise but not after sunset - set switch to 'On'
     Serial.println("After sunset - switch on");
-    rcSwitch.send(INT_SWITCH3_ON, 24);
+    rcSwitch.send(1397079, 24);
   }
   else
   {
     Serial.println("After 10 in the evenining - switch off");
-    rcSwitch.send(INT_SWITCH3_OFF, 24);
+    rcSwitch.send(1397076, 24);
   }
   
   updateLcdScreen(strSunrise, strSunset);
 
   // Refresh after x minutes...
-  delay(INT_LOOP_DELAY);
+  delay(60000);
 }
 
 /*
    Returns time formatted as string in 24-h hh:mm format
 */
-String getTimeFormattedAsString(int intMinutes, int intHour, int intMinute)
+String getTimeFormattedAsString(int intHour, int intMinute)
 {
-  if(intMinutes > 0)
-  {
-    String strHour = "", strMinute = "";
-    
-    if(intHour < 10)
-      strHour = "0" + (String)intHour;
-    else
-      strHour = (String)intHour;
+  String strHour = "", strMinute = "";
+  
+  if(intHour < 10)
+    strHour = "0" + (String)intHour;
+  else
+    strHour = (String)intHour;
 
-    if(intMinute < 10)
-      strMinute = "0" + (String)intMinute;
-    else
-      strMinute = (String)intMinute;
-      
-    return strHour + ":" + strMinute;
-  }
+  if(intMinute < 10)
+    strMinute = "0" + (String)intMinute;
+  else
+    strMinute = (String)intMinute;
+    
+  return strHour + ":" + strMinute;
 }
 
 void updateLcdScreen(String strSunrise, String strSunset)
@@ -176,7 +169,11 @@ void updateLcdScreen(String strSunrise, String strSunset)
   // Clear old data from display
   lcd.clear();
   lcd.setCursor(0, 0);
-
+  
+  Serial.println(String(year()) + "-" + String(month()) + "-" + String(day()) + " " + getTimeFormattedAsString(hour(), minute()));
+  Serial.println("Sunrise: " + strSunrise);
+  Serial.println("Sunset: " + strSunset);
+  
   // Print out current date & time
   lcd.print(String(year()) + "-" + String(month()) + "-" + String(day()) + " " + String(hour()) + strColon + String(minute()));
   lcd.setCursor(0, 1);
